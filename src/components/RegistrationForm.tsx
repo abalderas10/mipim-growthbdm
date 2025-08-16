@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface FormData {
   nombreCompleto: string;
@@ -10,6 +11,9 @@ interface FormData {
   empresa: string;
   cargo: string;
   telefono: string;
+  intereses: string[];
+  objetivosNetworking: string;
+  nivelExperiencia: string;
 }
 
 const RegistrationForm = () => {
@@ -19,12 +23,16 @@ const RegistrationForm = () => {
     sector: '',
     empresa: '',
     cargo: '',
-    telefono: ''
+    telefono: '',
+    intereses: [],
+    objetivosNetworking: '',
+    nivelExperiencia: ''
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [submitError, setSubmitError] = useState<string>('');
 
   const sectorOptions = [
     'Construcción',
@@ -36,6 +44,24 @@ const RegistrationForm = () => {
     'Ingeniería',
     'Legal',
     'Otros'
+  ];
+
+  const interesesOptions = [
+    'Inversión inmobiliaria',
+    'Desarrollo de proyectos',
+    'Financiamiento',
+    'Tecnología PropTech',
+    'Sostenibilidad',
+    'Regulaciones',
+    'Networking',
+    'Tendencias del mercado'
+  ];
+
+  const experienciaOptions = [
+    { value: 'principiante', label: 'Principiante (0-2 años)' },
+    { value: 'intermedio', label: 'Intermedio (3-7 años)' },
+    { value: 'avanzado', label: 'Avanzado (8-15 años)' },
+    { value: 'experto', label: 'Experto (15+ años)' }
   ];
 
   const validateForm = (): boolean => {
@@ -69,17 +95,43 @@ const RegistrationForm = () => {
       newErrors.telefono = 'Ingrese un número de teléfono válido';
     }
 
+    if (formData.intereses.length === 0) {
+      newErrors.intereses = 'Seleccione al menos un interés';
+    }
+
+    if (!formData.objetivosNetworking.trim()) {
+      newErrors.objetivosNetworking = 'Los objetivos de networking son requeridos';
+    }
+
+    if (!formData.nivelExperiencia.trim()) {
+      newErrors.nivelExperiencia = 'El nivel de experiencia es requerido';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
     // Clear error when user starts typing
     if (errors[name as keyof FormData]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleInteresesChange = (interes: string) => {
+    setFormData(prev => ({
+      ...prev,
+      intereses: prev.intereses.includes(interes)
+        ? prev.intereses.filter(i => i !== interes)
+        : [...prev.intereses, interes]
+    }));
+    
+    // Clear error when user selects an interest
+    if (errors.intereses) {
+      setErrors(prev => ({ ...prev, intereses: undefined }));
     }
   };
 
@@ -91,17 +143,40 @@ const RegistrationForm = () => {
     }
 
     setIsLoading(true);
+    setSubmitError('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Insert data into Supabase
+      const { data, error } = await supabase
+        .from('registrations')
+        .insert([
+          {
+            name: formData.nombreCompleto,
+            email: formData.correoElectronico,
+            company: formData.empresa,
+            position: formData.cargo,
+            phone: formData.telefono,
+            interests: formData.intereses,
+            networking_goals: formData.objetivosNetworking,
+            experience_level: formData.nivelExperiencia
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
       
-      // Here you would typically send the data to your backend
-      console.log('Form submitted:', formData);
-      
+      console.log('Registration successful:', data);
       setIsSubmitted(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
+      
+      if (error.code === '23505') {
+        setSubmitError('Este correo electrónico ya está registrado.');
+      } else {
+        setSubmitError('Ocurrió un error al procesar su registro. Por favor, inténtelo nuevamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -302,6 +377,85 @@ const RegistrationForm = () => {
                   )}
                 </div>
               </div>
+
+              {/* Intereses */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold">Áreas de Interés *</span>
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {interesesOptions.map((interes) => (
+                    <label key={interes} className="cursor-pointer label justify-start">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary mr-2"
+                        checked={formData.intereses.includes(interes)}
+                        onChange={() => handleInteresesChange(interes)}
+                      />
+                      <span className="label-text text-sm">{interes}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.intereses && (
+                  <label className="label">
+                    <span className="label-text-alt text-error">{errors.intereses}</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Objetivos de Networking */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold">Objetivos de Networking *</span>
+                </label>
+                <textarea
+                  name="objetivosNetworking"
+                  value={formData.objetivosNetworking}
+                  onChange={handleInputChange}
+                  className={`textarea textarea-bordered w-full h-24 ${errors.objetivosNetworking ? 'textarea-error' : ''}`}
+                  placeholder="Describa qué espera lograr en términos de networking en este evento..."
+                />
+                {errors.objetivosNetworking && (
+                  <label className="label">
+                    <span className="label-text-alt text-error">{errors.objetivosNetworking}</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Nivel de Experiencia */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold">Nivel de Experiencia *</span>
+                </label>
+                <select
+                  name="nivelExperiencia"
+                  value={formData.nivelExperiencia}
+                  onChange={handleInputChange}
+                  className={`select select-bordered w-full ${errors.nivelExperiencia ? 'select-error' : ''}`}
+                >
+                  <option value="">Seleccione su nivel de experiencia</option>
+                  {experienciaOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.nivelExperiencia && (
+                  <label className="label">
+                    <span className="label-text-alt text-error">{errors.nivelExperiencia}</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {submitError && (
+                <div className="alert alert-error">
+                  <svg className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{submitError}</span>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="text-center pt-6">
