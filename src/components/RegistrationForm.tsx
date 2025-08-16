@@ -189,10 +189,10 @@ const RegistrationForm = () => {
       
       console.log('Registration successful:', data);
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting form:', error);
       
-      if (error.code === '23505') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         setSubmitError('Este correo electrónico ya está registrado.');
       } else {
         setSubmitError('Ocurrió un error al procesar su registro. Por favor, inténtelo nuevamente.');
