@@ -46,10 +46,10 @@ const Testimonial = () => {
               {/* Testimonial Content */}
               <div className="relative z-10">
                 <blockquote className="text-lg md:text-xl text-base-content leading-relaxed mb-8 italic pl-20">
-                  "El evento de promoción de MIPIM es una iniciativa crucial para el sector inmobiliario en México. 
+                  &ldquo;El evento de promoción de MIPIM es una iniciativa crucial para el sector inmobiliario en México. 
                   Facilita conexiones estratégicas y abre puertas a oportunidades globales que son vitales para el 
                   crecimiento y la innovación. Es un honor ser parte de este esfuerzo que impulsa el desarrollo de 
-                  la industria en nuestro país."
+                  la industria en nuestro país.&rdquo;
                 </blockquote>
 
                 {/* Author Info */}

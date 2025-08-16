@@ -146,6 +146,25 @@ const RegistrationForm = () => {
     setSubmitError('');
     
     try {
+      // Check if Supabase is configured
+      if (!supabase) {
+        // Simulate form submission for demo purposes
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Demo mode - Registration data:', {
+          name: formData.nombreCompleto,
+          email: formData.correoElectronico,
+          sector: formData.sector,
+          company: formData.empresa,
+          position: formData.cargo,
+          phone: formData.telefono,
+          interests: formData.intereses,
+          networking_goals: formData.objetivosNetworking,
+          experience_level: formData.nivelExperiencia
+        });
+        setIsSubmitted(true);
+        return;
+      }
+
       // Insert data into Supabase
       const { data, error } = await supabase
         .from('registrations')
@@ -153,6 +172,7 @@ const RegistrationForm = () => {
           {
             name: formData.nombreCompleto,
             email: formData.correoElectronico,
+            sector: formData.sector,
             company: formData.empresa,
             position: formData.cargo,
             phone: formData.telefono,

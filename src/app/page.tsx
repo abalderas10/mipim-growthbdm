@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import HeroSection from '@/components/HeroSection';
 import DiscoverMipim from '@/components/DiscoverMipim';
 import Speakers from '@/components/Speakers';
