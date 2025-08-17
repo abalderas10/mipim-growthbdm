@@ -31,7 +31,7 @@ const RegistrationForm = () => {
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [submitError, setSubmitError] = useState<string>('');
 
   const sectorOptions = [
@@ -65,7 +65,7 @@ const RegistrationForm = () => {
   ];
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<FormData> = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
 
     if (!formData.nombreCompleto.trim()) {
       newErrors.nombreCompleto = 'El nombre completo es requerido';
@@ -117,7 +117,7 @@ const RegistrationForm = () => {
     
     // Clear error when user starts typing
     if (errors[name as keyof FormData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors(prev => ({ ...prev, [name as keyof FormData]: undefined }));
     }
   };
 
