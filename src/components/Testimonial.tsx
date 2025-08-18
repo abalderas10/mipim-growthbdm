@@ -10,7 +10,7 @@ const Testimonial = () => {
   };
 
   return (
-    <section className="py-20 bg-primary/5">
+    <section className="py-20 bg-primary/5" data-theme="mipim">
       <div className="container mx-auto px-6">
         <motion.div
           initial="initial"

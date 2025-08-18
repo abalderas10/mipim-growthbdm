@@ -18,26 +18,26 @@ module.exports = {
     themes: [
       {
         mipim: {
-          'primary': '#1e40af',
-          'primary-focus': '#1d4ed8',
+          'primary': '#003366',        // Azul MIPIM corporativo
+          'primary-focus': '#002244',  // Azul más oscuro
           'primary-content': '#ffffff',
-          'secondary': '#6b7280',
-          'secondary-focus': '#4b5563',
+          'secondary': '#0066cc',      // Azul secundario
+          'secondary-focus': '#0052a3',
           'secondary-content': '#ffffff',
-          'accent': '#d97706',
-          'accent-focus': '#b45309',
-          'accent-content': '#ffffff',
-          'neutral': '#374151',
-          'neutral-focus': '#1f2937',
+          'accent': '#ffd700',         // Dorado MIPIM
+          'accent-focus': '#e6c200',   // Dorado más oscuro
+          'accent-content': '#003366',
+          'neutral': '#2d3748',        // Gris neutro
+          'neutral-focus': '#1a202c',
           'neutral-content': '#ffffff',
-          'base-100': '#ffffff',
-          'base-200': '#f9fafb',
-          'base-300': '#f3f4f6',
-          'base-content': '#1f2937',
-          'info': '#3b82f6',
-          'success': '#10b981',
-          'warning': '#f59e0b',
-          'error': '#ef4444',
+          'base-100': '#ffffff',       // Fondo blanco
+          'base-200': '#f7fafc',       // Gris muy claro
+          'base-300': '#edf2f7',       // Gris claro
+          'base-content': '#2d3748',   // Texto principal
+          'info': '#3182ce',           // Azul información
+          'success': '#38a169',        // Verde éxito
+          'warning': '#d69e2e',        // Amarillo advertencia
+          'error': '#e53e3e',          // Rojo error
         },
       },
     ],

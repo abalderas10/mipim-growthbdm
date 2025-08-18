@@ -18,7 +18,7 @@ const DiscoverMipim = () => {
   };
 
   return (
-    <section className="py-20 bg-base-100">
+    <section className="py-20 bg-base-100" data-theme="mipim">
       <div className="container mx-auto px-6">
         <motion.div
           initial="initial"

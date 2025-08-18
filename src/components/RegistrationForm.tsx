@@ -1,8 +1,10 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { supabase, isValidConfig } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
+import AuthComponent from './AuthComponent';
 
 interface FormData {
   nombreCompleto: string;
@@ -12,11 +14,11 @@ interface FormData {
   cargo: string;
   telefono: string;
   intereses: string[];
-  objetivosNetworking: string;
-  nivelExperiencia: string;
+  proyectoNegocio: string;
 }
 
 const RegistrationForm = () => {
+  const [session, setSession] = useState<Session | null>(null);
   const [formData, setFormData] = useState<FormData>({
     nombreCompleto: '',
     correoElectronico: '',
@@ -25,14 +27,27 @@ const RegistrationForm = () => {
     cargo: '',
     telefono: '',
     intereses: [],
-    objetivosNetworking: '',
-    nivelExperiencia: ''
+    proyectoNegocio: ''
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [submitError, setSubmitError] = useState<string>('');
+
+  // Auto-fill form data when user is authenticated
+  useEffect(() => {
+    if (session?.user) {
+      const user = session.user;
+      setFormData(prev => ({
+        ...prev,
+        correoElectronico: user.email || '',
+        nombreCompleto: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        empresa: user.user_metadata?.company || '',
+        cargo: user.user_metadata?.job_title || ''
+      }));
+    }
+  }, [session]);
 
   const sectorOptions = [
     'Construcción',
@@ -57,12 +72,7 @@ const RegistrationForm = () => {
     'Tendencias del mercado'
   ];
 
-  const experienciaOptions = [
-    { value: 'principiante', label: 'Principiante (0-2 años)' },
-    { value: 'intermedio', label: 'Intermedio (3-7 años)' },
-    { value: 'avanzado', label: 'Avanzado (8-15 años)' },
-    { value: 'experto', label: 'Experto (15+ años)' }
-  ];
+
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
@@ -99,13 +109,11 @@ const RegistrationForm = () => {
       newErrors.intereses = 'Seleccione al menos un interés';
     }
 
-    if (!formData.objetivosNetworking.trim()) {
-      newErrors.objetivosNetworking = 'Los objetivos de networking son requeridos';
+    if (!formData.proyectoNegocio.trim()) {
+      newErrors.proyectoNegocio = 'La descripción del proyecto/negocio es requerida';
     }
 
-    if (!formData.nivelExperiencia.trim()) {
-      newErrors.nivelExperiencia = 'El nivel de experiencia es requerido';
-    }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -146,39 +154,45 @@ const RegistrationForm = () => {
     setSubmitError('');
     
     try {
+      // Debug: Check Supabase configuration
+      console.log('Supabase client:', supabase);
+      console.log('Environment variables:', {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      });
+      console.log('Is valid config:', isValidConfig);
+      
       // Check if Supabase is configured
-      if (!supabase) {
+      if (!isValidConfig) {
         // Simulate form submission for demo purposes
         await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Demo mode - Registration data:', {
           name: formData.nombreCompleto,
           email: formData.correoElectronico,
-          sector: formData.sector,
+          // sector: formData.sector, // TODO: Add sector column to database
           company: formData.empresa,
           position: formData.cargo,
           phone: formData.telefono,
-          interests: formData.intereses,
-          networking_goals: formData.objetivosNetworking,
-          experience_level: formData.nivelExperiencia
+            interests: formData.intereses,
+            networking_goals: formData.proyectoNegocio
         });
         setIsSubmitted(true);
         return;
       }
 
-      // Insert data into Supabase
+      // Insert data into Supabase (temporarily excluding sector field until column is added)
       const { data, error } = await supabase
         .from('registrations')
         .insert([
           {
             name: formData.nombreCompleto,
             email: formData.correoElectronico,
-            sector: formData.sector,
+            // sector: formData.sector, // TODO: Add sector column to database
             company: formData.empresa,
             position: formData.cargo,
             phone: formData.telefono,
             interests: formData.intereses,
-            networking_goals: formData.objetivosNetworking,
-            experience_level: formData.nivelExperiencia
+            networking_goals: formData.proyectoNegocio
           }
         ])
         .select();
@@ -191,9 +205,21 @@ const RegistrationForm = () => {
       setIsSubmitted(true);
     } catch (error: unknown) {
       console.error('Error submitting form:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorObject: error
+      });
+      
+      // Check if it's an RLS policy error
+      if (error && typeof error === 'object' && 'code' in error && error.code === '42501') {
+        console.error('RLS Policy Error: The database policy does not allow anonymous insertions. Please contact support.');
+      }
       
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         setSubmitError('Este correo electrónico ya está registrado.');
+      } else if (error instanceof Error) {
+        setSubmitError(`Error: ${error.message}`);
       } else {
         setSubmitError('Ocurrió un error al procesar su registro. Por favor, inténtelo nuevamente.');
       }
@@ -208,9 +234,46 @@ const RegistrationForm = () => {
     transition: { duration: 0.8 }
   };
 
+  const handleAuthSuccess = (authSession: Session) => {
+    setSession(authSession);
+  };
+
+  // Show authentication component if user is not logged in
+  if (!session) {
+    return (
+      <section id="registration" className="py-20 bg-base-100" data-theme="mipim">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="max-w-2xl mx-auto"
+          >
+            <div className="text-center mb-6">
+              <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+                Asegure su Acceso Gratuito
+              </h2>
+              <div className="w-24 h-1 bg-accent mx-auto mb-6"></div>
+              <p className="text-lg text-base-content/80 mb-4">
+                Inicia sesión para continuar con tu registro
+              </p>
+              <p className="text-sm text-base-content/60">
+                ¿Prefieres una página dedicada?{' '}
+                <a href="/auth" className="text-primary hover:text-primary-focus font-medium underline">
+                  Ir a página de autenticación
+                </a>
+              </p>
+            </div>
+            <AuthComponent onAuthSuccess={handleAuthSuccess} />
+          </motion.div>
+        </div>
+      </section>
+    );
+  }
+
   if (isSubmitted) {
     return (
-      <section id="registration" className="py-20 bg-base-100">
+      <section id="registration" className="py-20 bg-base-100" data-theme="mipim">
         <div className="container mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -241,7 +304,7 @@ const RegistrationForm = () => {
   }
 
   return (
-    <section id="registration" className="py-20 bg-base-100">
+    <section id="registration" className="py-20 bg-base-100" data-theme="mipim">
       <div className="container mx-auto px-6">
         <motion.div
           initial="initial"
@@ -266,6 +329,17 @@ const RegistrationForm = () => {
               Este es un evento exclusivo con cupo limitado, dirigido a C-Level del sector. 
               Complete el formulario para obtener su boleto de acceso.
             </p>
+            <div className="text-center mt-4">
+              <p className="text-sm text-base-content/60">
+                Conectado como: {session.user.email}
+              </p>
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="text-sm text-primary hover:text-primary-focus underline mt-1"
+              >
+                Cambiar cuenta
+              </button>
+            </div>
           </motion.div>
 
           {/* Form */}
@@ -302,8 +376,10 @@ const RegistrationForm = () => {
                     name="correoElectronico"
                     value={formData.correoElectronico}
                     onChange={handleInputChange}
-                    className={`input input-bordered w-full ${errors.correoElectronico ? 'input-error' : ''}`}
+                    className={`input input-bordered w-full bg-base-300 ${errors.correoElectronico ? 'input-error' : ''}`}
                     placeholder="ejemplo@empresa.com"
+                    readOnly
+                    title="Email obtenido de tu cuenta autenticada"
                   />
                   {errors.correoElectronico && (
                     <label className="label">
@@ -423,49 +499,26 @@ const RegistrationForm = () => {
                 )}
               </div>
 
-              {/* Objetivos de Networking */}
+              {/* Proyecto/Negocio */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-semibold">Objetivos de Networking *</span>
+                  <span className="label-text font-semibold">Cuéntanos tu Proyecto / Negocio *</span>
                 </label>
                 <textarea
-                  name="objetivosNetworking"
-                  value={formData.objetivosNetworking}
+                  name="proyectoNegocio"
+                  value={formData.proyectoNegocio}
                   onChange={handleInputChange}
-                  className={`textarea textarea-bordered w-full h-24 ${errors.objetivosNetworking ? 'textarea-error' : ''}`}
-                  placeholder="Describa qué espera lograr en términos de networking en este evento..."
+                  className={`textarea textarea-bordered w-full h-24 ${errors.proyectoNegocio ? 'textarea-error' : ''}`}
+                  placeholder="Describe tu proyecto o negocio para dirigir el networking hacia tus objetivos..."
                 />
-                {errors.objetivosNetworking && (
+                {errors.proyectoNegocio && (
                   <label className="label">
-                    <span className="label-text-alt text-error">{errors.objetivosNetworking}</span>
+                    <span className="label-text-alt text-error">{errors.proyectoNegocio}</span>
                   </label>
                 )}
               </div>
 
-              {/* Nivel de Experiencia */}
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-semibold">Nivel de Experiencia *</span>
-                </label>
-                <select
-                  name="nivelExperiencia"
-                  value={formData.nivelExperiencia}
-                  onChange={handleInputChange}
-                  className={`select select-bordered w-full ${errors.nivelExperiencia ? 'select-error' : ''}`}
-                >
-                  <option value="">Seleccione su nivel de experiencia</option>
-                  {experienciaOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.nivelExperiencia && (
-                  <label className="label">
-                    <span className="label-text-alt text-error">{errors.nivelExperiencia}</span>
-                  </label>
-                )}
-              </div>
+
 
               {/* Error Message */}
               {submitError && (

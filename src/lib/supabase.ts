@@ -3,10 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_key'
 
-// Only create client if we have valid URLs
-const isValidConfig = supabaseUrl !== 'https://placeholder.supabase.co' && supabaseAnonKey !== 'placeholder_key'
+// Always create client - let Supabase handle authentication
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export const supabase = isValidConfig ? createClient(supabaseUrl, supabaseAnonKey) : null
+// Check if configuration is valid
+export const isValidConfig = supabaseUrl !== 'https://placeholder.supabase.co' && supabaseAnonKey !== 'placeholder_key'
 
 // Database types (will be updated when we create the database schema)
 export interface Registration {
@@ -19,5 +20,5 @@ export interface Registration {
   phone: string
   interests: string[]
   networking_goals: string
-  experience_level: string
+  status?: string
 }

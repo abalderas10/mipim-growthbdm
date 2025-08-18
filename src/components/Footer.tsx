@@ -18,7 +18,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-neutral text-neutral-content">
+    <footer className="bg-neutral text-neutral-content" data-theme="mipim">
       <div className="container mx-auto px-6">
         {/* Main Footer Content */}
         <motion.div
